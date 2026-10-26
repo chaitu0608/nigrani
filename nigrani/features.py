@@ -136,7 +136,7 @@ def _sync_peers(asd: pd.DataFrame, window: int = 5) -> np.ndarray:
     direction on at least 2 of the last `window` days that this account also traded it (cross-account synchronisation)."""
     x = asd[["account", "symbol", "di", "net"]].copy(); x["side"] = np.sign(x.net)
     res = np.zeros(len(x)); pos = {k: i for i, k in enumerate(x.index)}
-    for (_, side), g in x[x.side != 0].groupby(["symbol", "side"]):
+    for _, g in x[x.side != 0].groupby(["symbol", "side"]):
         if len(g) < 2: continue
         accs = g.account.to_numpy(); days = g.di.to_numpy()
         by_day: dict[int, list[int]] = {}

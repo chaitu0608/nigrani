@@ -3,3 +3,6 @@ __pycache__/
 data/
 artifacts/
 .pytest_cache/
+catboost_info/
+.coverage
+*.db

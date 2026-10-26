@@ -34,7 +34,7 @@ def generate(n_accounts=2000, n_symbols=60, n_days=120, seed=7):
     def add(d, a, cp, s, side, qty, px, label, typ):
         nonlocal tid
         tid += 1
-        rows.append((tid, d, a, cp, s, side, int(qty), round(px, 2), label, typ))
+        rows.append((tid, d, a, cp, s, side, max(1, int(qty)), round(px, 2), label, typ))
     for di, d in enumerate(days):
         active = rng.random(n_accounts) < np.where(acct_type == "active_trader", .6, .12)
         for a in np.nonzero(active)[0]:

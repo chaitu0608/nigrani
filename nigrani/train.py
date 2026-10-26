@@ -187,3 +187,29 @@ def _plots(imp: dict[str, float], best: str, yt: np.ndarray, st: np.ndarray, sb:
 
 
 if __name__ == "__main__": main()
+
+
+def retrain_with_feedback(name: str, feedback: pd.DataFrame, production: Scorer, parent: str, actor: str) -> dict[str, Any]:
+    """Refit `name` on the development fit window plus every account-day an analyst labelled (their disposition
+    replaces the noisy label). Gate: PR-AUC on the held-out calibration block, which no feedback row touches."""
+    f = pd.read_parquet(ROOT / "data" / "features.parquet")
+    dev, test, folds = split(f)
+    cal_dates = folds[-1][1]; fit_dates = np.sort(dev.date.unique()); fit_dates = fit_dates[fit_dates < cal_dates[0]][:-EMBARGO]
+    fb = feedback.assign(date=pd.to_datetime(feedback.date)).drop_duplicates(["date", "account"], keep="last")
+    keys = f.merge(fb[["date", "account"]], on=["date", "account"], how="inner")
+    keys = keys[~keys.date.isin(cal_dates)]  # never train on the gate block
+    tr = apply_overrides(pd.concat([f[f.date.isin(fit_dates)], keys]).drop_duplicates(["date", "account"], keep="last"), fb)
+    cal = dev[dev.date.isin(cal_dates)]
+    model = CANDIDATES[name][0]().fit(tr, tr.label_noisy.to_numpy()); s = model.predict_proba(cal)
+    thr = {f"{b:.1%}": float(np.quantile(s, 1 - b)) for b in BUDGETS}
+    y = cal.label.to_numpy(); cand, prod = evaluate(y, s)["pr_auc"], evaluate(y, production.predict_proba(cal))["pr_auc"]
+    parent_meta = registry.metadata(parent)
+    meta = {**{k: parent_meta[k] for k in ("name", "model", "features", "protocol", "data", "cv", "label_noise", "global_shap_mean_abs")},
+            "thresholds": thr, "deployed_budget": "1.0%",
+            "test": {"note": "not re-evaluated: feedback rows come from the live/test window, so test is no longer clean for this version",
+                     "parent_test": parent_meta.get("test")},
+            "retrain": {"parent": parent, "actor": actor, "feedback_rows": len(fb), "feedback_rows_used": len(keys), "train_rows": len(tr),
+                        "gate_block": [str(cal.date.min())[:10], str(cal.date.max())[:10]], "candidate_pr_auc": cand, "production_pr_auc": prod}}
+    version = registry.register({"scorer": model, "features": model.features, "name": name, "thresholds": thr, "threshold": thr["1.0%"]}, meta)
+    f[["date", "account"] + FEATURES].assign(score=model.predict_proba(f)).to_parquet(registry.REG / version / "scored.parquet")
+    return {"version": version, "parent": parent, "candidate_pr_auc": cand, "production_pr_auc": prod, "feedback_rows_used": len(keys), "train_rows": len(tr)}
