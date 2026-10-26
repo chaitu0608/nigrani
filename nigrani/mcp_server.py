@@ -1,51 +1,197 @@
-"""Nigrani MCP server: lets Claude Desktop / Cursor act as a surveillance analyst's copilot.
-Run: python -m nigrani.mcp_server  (stdio transport)"""
+"""Nigrani MCP server: an analyst copilot over the same service layer as the REST API.
+
+Run: python -m nigrani.mcp_server   (stdio). Env: NIGRANI_DB, NIGRANI_MCP_ACTOR (audit-trail name).
+Scores are model output, not findings of fact; every state change is written to the alert audit trail.
+"""
+from __future__ import annotations
+
+import json
+import os
+from typing import Any
+
 from mcp.server.mcpserver import MCPServer
 
-from nigrani import core
+from nigrani.service import get_service
 
-mcp = MCPServer("nigrani-surveillance", instructions="Tools for reviewing trade-surveillance alerts. Scores are model output, not findings of fact.")
+ACTOR = os.environ.get("NIGRANI_MCP_ACTOR", "mcp-analyst")
+mcp = MCPServer("nigrani-surveillance", instructions=(
+    "Trade-surveillance copilot. Start with list_alerts, then explain_alert, get_account_timeline and "
+    "get_counterparty_network before drafting a note. Scores are model output, not findings of fact; never "
+    "close an alert as true_positive without the analyst's confirmation."))
+
+
+def svc() -> Any: return get_service()
+
+
+# ---------------------------------------------------------------- alerts
+@mcp.tool()
+def list_alerts(status: str | None = None, pattern: str | None = None, assignee: str | None = None, min_score: float | None = None,
+                account: int | None = None, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+    """Alert queue with filters (status open|assigned|escalated|closed, pattern pump|network) and pagination, highest score first."""
+    return svc().list_alerts(status=status, pattern=pattern, assignee=assignee, min_score=min_score, account=account, page=page, page_size=page_size)
+
 
 @mcp.tool()
-def list_alerts(limit: int = 20) -> list[dict]:
-    """Top surveillance alerts (account-days) above the model threshold, highest score first."""
-    return core.list_alerts(limit)
+def get_alert(alert_id: str) -> dict[str, Any]:
+    """Full alert record (status, assignee, disposition, audit trail) plus SHAP explanation. Id format YYYY-MM-DD:account."""
+    return svc().get_alert(alert_id)
+
+
 @mcp.tool()
-def explain_alert(alert_id: str) -> dict:
-    """SHAP explanation for an alert id like '2026-06-01:123': score and top feature drivers."""
-    return core.explain_alert(alert_id)
+def explain_alert(alert_id: str, top_k: int = 8) -> dict[str, Any]:
+    """SHAP drivers for an account-day: score, threshold, top features with values and log-odds contributions."""
+    return svc().explain_account_day(alert_id, top_k)
+
+
 @mcp.tool()
-def get_account_trades(account: int, date: str, limit: int = 50) -> list[dict]:
-    """Raw trades for one account on one date (YYYY-MM-DD)."""
-    return core.account_trades(account, date, limit)
+def assign_alert(alert_id: str, assignee: str) -> dict[str, Any]:
+    """Assign an open/assigned/escalated alert to an analyst."""
+    return svc().assign(alert_id, assignee, ACTOR)
+
+
 @mcp.tool()
-def get_counterparty_network(account: int, date: str) -> dict:
-    """Internal counterparty edges touching the account that day — use to spot wash / circular rings."""
-    return core.counterparty_network(account, date)
+def escalate_alert(alert_id: str, reason: str) -> dict[str, Any]:
+    """Escalate an alert to compliance with a written reason (min 5 chars). Raises priority to high."""
+    return svc().escalate(alert_id, reason, ACTOR)
+
+
 @mcp.tool()
-def score_features(features: dict[str, float]) -> dict:
-    """Score an arbitrary account-day feature vector and explain it."""
-    return core.explain(features)
+def close_alert(alert_id: str, disposition: str, note: str = "") -> dict[str, Any]:
+    """Close an alert with disposition true_positive | false_positive | benign_explained. The disposition becomes a training label."""
+    return svc().close(alert_id, disposition, ACTOR, note)
+
+
+@mcp.tool()
+def record_feedback(alert_id: str, verdict: str, note: str = "") -> dict[str, Any]:
+    """Record an analyst verdict without closing (true_positive | false_positive | benign_explained | needs_more_info)."""
+    return svc().record_feedback(alert_id, verdict, ACTOR, note)
+
+
 @mcp.tool()
 def draft_case_note(alert_id: str) -> str:
-    """Draft an analyst case note for an alert (draft only, human must review)."""
-    return core.draft_case_note(alert_id)
-@mcp.tool()
-def get_model_card() -> dict:
-    """Evaluation metrics, split, threshold and global SHAP importance of the deployed model."""
-    return core.model_card()
+    """Draft an investigation note from SHAP drivers, network and timeline. A draft for human review, never a filed STR."""
+    return svc().draft_case_note(alert_id)
+
 
 @mcp.tool()
-def list_experiments(top: int = 20) -> list[dict]:
-    """Experiment log: every model / imbalance strategy tried, with validation and test metrics."""
-    return core.experiments(top)
-@mcp.tool()
-def get_drift_report(top: int = 10) -> dict:
-    """Population Stability Index of each feature, training period vs latest period."""
-    return core.drift_report(top)
-@mcp.tool()
-def record_analyst_feedback(alert_id: str, verdict: str, note: str = "") -> dict:
-    """Store the analyst's verdict on an alert (true_positive | false_positive | needs_more_info) for retraining."""
-    return core.record_feedback(alert_id, verdict, note)
+def queue_stats() -> dict[str, Any]:
+    """Alert counts by status, dispositions, cases by status and realised analyst precision."""
+    return svc().queue_stats()
 
-if __name__ == "__main__": mcp.run("stdio")
+
+# ---------------------------------------------------------------- investigation
+@mcp.tool()
+def get_account_timeline(account: int, end: str | None = None, days: int = 30) -> dict[str, Any]:
+    """Daily risk score, traded value, alert status and top symbols for an account over its last `days` trading days up to `end`."""
+    return svc().account_timeline(account, end, days)
+
+
+@mcp.tool()
+def get_counterparty_network(account: int, date: str, window: int = 5) -> dict[str, Any]:
+    """Graph around an account-day: direct trades, same-side co-trading accounts over `window` days, and shared-KYC links."""
+    return svc().counterparty_network(account, date, window)
+
+
+@mcp.tool()
+def get_linked_accounts(account: int) -> dict[str, Any]:
+    """Accounts sharing address / phone / bank with this one, and its resolved entity."""
+    return svc().linked_accounts(account)
+
+
+@mcp.tool()
+def get_account_trades(account: int, date: str, limit: int = 50) -> list[dict[str, Any]]:
+    """Raw trades for one account on one date (YYYY-MM-DD)."""
+    return svc().account_trades(account, date, limit)
+
+
+# ---------------------------------------------------------------- cases
+@mcp.tool()
+def create_case(title: str, alert_ids: list[str], summary: str = "") -> dict[str, Any]:
+    """Open an investigation case grouping one or more alerts."""
+    return svc().create_case(title, alert_ids, ACTOR, summary=summary)
+
+
+@mcp.tool()
+def list_cases(status: str | None = None, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+    """Cases, newest first; status open | under_review | str_filed | closed_no_action."""
+    return svc().list_cases(status=status, page=page, page_size=page_size)
+
+
+@mcp.tool()
+def get_case(case_id: int) -> dict[str, Any]:
+    """One case with alerts and notes."""
+    return svc().get_case(case_id)
+
+
+@mcp.tool()
+def add_case_note(case_id: int, body: str) -> dict[str, Any]:
+    """Append a note to a case."""
+    return svc().add_case_note(case_id, body, ACTOR)
+
+
+@mcp.tool()
+def update_case_status(case_id: int, status: str) -> dict[str, Any]:
+    """Move a case to open | under_review | str_filed | closed_no_action (the last two are final)."""
+    return svc().update_case(case_id, ACTOR, status=status)
+
+
+# ---------------------------------------------------------------- model
+@mcp.tool()
+def score_account_day(features: dict[str, float]) -> dict[str, Any]:
+    """Score one account-day from its feature vector (see model card for the feature list)."""
+    return svc().score(features)
+
+
+@mcp.tool()
+def model_card() -> dict[str, Any]:
+    """Production model version, CV and test metrics, alert budgets, label-noise and protocol notes."""
+    return svc().model_card()
+
+
+@mcp.tool()
+def model_versions() -> dict[str, Any]:
+    """Model registry: versions, creation time, git sha, artifact hash and which is in production."""
+    return svc().model_versions()
+
+
+@mcp.tool()
+def drift_report(recent_days: int | None = None) -> dict[str, Any]:
+    """Population stability (PSI) of each feature and the score, development period vs live period."""
+    return svc().drift_report(recent_days)
+
+
+@mcp.tool()
+def sync_alerts(budget: str = "1.0%") -> dict[str, Any]:
+    """Generate alerts from the production model's live-period scores at an alert budget (0.5% | 1.0% | 2.0%). Idempotent."""
+    return svc().sync_alerts(budget)
+
+
+# ---------------------------------------------------------------- resources + prompts
+@mcp.resource("nigrani://model-card", mime_type="application/json", description="Production model card")
+def model_card_resource() -> str: return json.dumps(svc().model_card(), default=str)
+
+
+@mcp.resource("nigrani://alerts/{alert_id}", mime_type="application/json", description="One alert with explanation")
+def alert_resource(alert_id: str) -> str: return json.dumps(svc().get_alert(alert_id), default=str)
+
+
+@mcp.resource("nigrani://cases/{case_id}", mime_type="application/json", description="One case with notes")
+def case_resource(case_id: str) -> str: return json.dumps(svc().get_case(int(case_id)), default=str)
+
+
+@mcp.prompt(description="Step-by-step triage of one alert")
+def triage_alert(alert_id: str) -> str:
+    return (f"Triage surveillance alert {alert_id}. 1) get_alert and explain_alert: which features drive the score? "
+            "2) get_account_timeline: is this a one-off or a build-up? 3) get_counterparty_network and get_linked_accounts: "
+            "are there KYC-linked or co-trading accounts? 4) Classify the likely pattern (wash, circular, pump-and-dump, benign). "
+            "5) draft_case_note and recommend assign / escalate / close with a disposition. Do not close without analyst approval.")
+
+
+@mcp.prompt(description="Weekly surveillance summary for the compliance head")
+def weekly_summary() -> str:
+    return ("Write a weekly surveillance summary: use queue_stats, list_alerts(status='escalated'), list_cases and drift_report. "
+            "Cover alert volume and realised precision, escalations, open cases, any drifting features (PSI > 0.1), and model version.")
+
+
+if __name__ == "__main__":
+    mcp.run()
