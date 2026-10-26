@@ -23,6 +23,7 @@ export type ModelCard = {
   features: string[]; thresholds: Record<string, number>; deployed_budget: string; protocol: string[];
   data: { rows: number; test_rows: number; test_positives: number; dev_end: string; test_start: string; folds?: unknown[] };
   cv: Record<string, CvRow>; test: { selected: EvalBlock; v2_baseline?: EvalBlock }; global_shap_mean_abs: Record<string, number>; label_noise: string;
+  external_benchmarks?: { elliptic?: { paper: string; nigrani: { precision: number; recall: number; f1: number; pr_auc: number }; paper_best_rf_f1: number; paper_gcn_f1: number } };
 };
 export type Versions = { production: string; versions: { version: string; created_at: string; git_sha: string; artifact_sha: string; name: string; stage: string }[] };
 export type Drift = { reference: string[]; current: string[]; psi: Record<string, number>; rule: string; watch: string[]; investigate: string[]; alert_rate: { reference: number; current: number } };

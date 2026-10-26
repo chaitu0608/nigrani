@@ -1,11 +1,16 @@
 FROM python:3.12-slim
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt . 
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/* \
+ && useradd -m -u 1000 nigrani
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
+# Bake a seeded, reproducible demo: synthetic market -> features -> trained registry -> alert queue.
 RUN python -m nigrani.generate && python -m nigrani.features && python -m nigrani.train
-ENV NIGRANI_DB=sqlite:////app/artifacts/nigrani.db
-RUN python -c "from nigrani.service import get_service; get_service().sync_alerts()"
+ENV NIGRANI_DB=sqlite:////app/artifacts/nigrani.db PORT=8000
+RUN python -c "from nigrani.service import get_service; get_service().sync_alerts()" && chown -R nigrani /app
+USER nigrani
 EXPOSE 8000
-CMD ["uvicorn", "nigrani.api:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import os,urllib.request;urllib.request.urlopen(f'http://127.0.0.1:{os.environ[\"PORT\"]}/health')"
+# PORT is injected by Render / Fly / HF Spaces (7860). Set NIGRANI_DEMO=1 for a read-only public demo.
+CMD ["sh", "-c", "uvicorn nigrani.api:app --host 0.0.0.0 --port ${PORT}"]

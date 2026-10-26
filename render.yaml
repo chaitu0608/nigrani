@@ -1,0 +1,11 @@
+# Render Blueprint: New > Blueprint > pick this repo. Free web service, Docker runtime, read-only demo.
+services:
+  - type: web
+    name: nigrani-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: NIGRANI_DEMO
+        value: "1"

@@ -5,6 +5,7 @@ Nothing here exposes ground-truth labels or typologies; those exist only in offl
 from __future__ import annotations
 
 import datetime as dt
+import json
 import os
 import threading
 from collections.abc import Iterator
@@ -59,6 +60,21 @@ def psi(ref: np.ndarray, cur: np.ndarray, bins: int = 10) -> float:
     r = np.histogram(ref, edges)[0] / len(ref); c = np.histogram(cur, edges)[0] / max(1, len(cur))
     r, c = np.clip(r, 1e-4, None), np.clip(c, 1e-4, None)
     return float(np.sum((c - r) * np.log(c / r)))
+
+
+def external_benchmarks() -> dict[str, Any]:
+    """Real-data results (Elliptic, Weber et al. 2019) and the subtle-pump study, if their reports exist."""
+    out: dict[str, Any] = {}
+    rep = Path(__file__).resolve().parent.parent / "reports"
+    e = rep / "elliptic_benchmark.json"
+    if e.exists():
+        d = json.loads(e.read_text()); sel = d["results"][d["selected"]]["default_0.5"]
+        out["elliptic"] = {"paper": d["paper"], "split": d["split"], "nigrani": {k: sel[k] for k in ("precision", "recall", "f1", "pr_auc")},
+                           "paper_best_rf_f1": d["paper_baselines"]["RF AF"]["f1"], "paper_gcn_f1": d["paper_baselines"]["GCN"]["f1"]}
+    p = rep / "pump_experiments.json"
+    if p.exists():
+        d = json.loads(p.read_text()); out["subtle_pump_study"] = {"cv_winner": d["cv_winner"], "test": d["test_read_once"]}
+    return out
 
 
 class SurveillanceService:
@@ -436,7 +452,7 @@ class SurveillanceService:
         return {"version": m["version"], "name": m["name"], "created_at": m["created_at"], "git_sha": m["git_sha"], "model": m["model"],
                 "features": m["features"], "thresholds": {k: round(v, 4) for k, v in m["thresholds"].items()}, "deployed_budget": m["deployed_budget"],
                 "protocol": m["protocol"], "data": m["data"], "cv": m["cv"], "test": m["test"], "global_shap_mean_abs": m["global_shap_mean_abs"],
-                "label_noise": m["label_noise"], "retrain": m.get("retrain")}
+                "label_noise": m["label_noise"], "retrain": m.get("retrain"), "external_benchmarks": external_benchmarks()}
 
     def model_versions(self) -> dict[str, Any]: return registry.index()
 

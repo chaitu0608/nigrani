@@ -22,8 +22,13 @@ log = logging.getLogger("nigrani.api")
 STATIC = Path(__file__).parent / "static"
 
 
+DEMO = os.environ.get("NIGRANI_DEMO", "").lower() in {"1", "true", "yes"}
+DEMO_ALLOWED_POSTS = {"/v1/score", "/v1/score/batch", "/v1/explain"}  # pure compute, no state change
+
+
 def _keys() -> dict[str, tuple[str, str]]:
-    raw = os.environ.get("NIGRANI_API_KEYS", "analyst-dev-key=analyst1:analyst,admin-dev-key=admin:admin")
+    default = "demo-key=demo:analyst,analyst-dev-key=analyst1:analyst" if DEMO else "analyst-dev-key=analyst1:analyst,admin-dev-key=admin:admin"
+    raw = os.environ.get("NIGRANI_API_KEYS", default)
     out = {}
     for item in filter(None, (x.strip() for x in raw.split(","))):
         key, _, rest = item.partition("="); user, _, role = rest.partition(":"); out[key] = (user, role or "analyst")
@@ -105,6 +110,14 @@ async def _rv(request: Request, e: RequestValidationError) -> JSONResponse:
 async def _fnf(request: Request, e: FileNotFoundError) -> JSONResponse: return _err(request, 503, "not_ready", str(e))
 
 
+@app.middleware("http")
+async def _demo_read_only(request: Request, call_next: Any) -> Any:
+    """NIGRANI_DEMO=1: public demo. Every state-changing call is refused, so the seeded database never drifts."""
+    if DEMO and request.method not in {"GET", "HEAD", "OPTIONS"} and request.url.path not in DEMO_ALLOWED_POSTS:
+        return _err(request, 403, "demo_read_only", "this is a read-only public demo; run locally for the full workflow")
+    return await call_next(request)
+
+
 # ------------------------------------------------------------------ public
 APP_DIR = STATIC / "app"  # React build output (web/ -> npm run build)
 
@@ -119,7 +132,7 @@ def root() -> FileResponse: return _spa()
 
 
 @app.get("/health", tags=["ops"])
-def health() -> dict[str, Any]: return {"status": "ok", "uptime_s": round(time.time() - METRICS["started"], 1)}
+def health() -> dict[str, Any]: return {"status": "ok", "demo": DEMO, "uptime_s": round(time.time() - METRICS["started"], 1)}
 
 
 @app.get("/ready", tags=["ops"])

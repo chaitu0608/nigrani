@@ -43,6 +43,7 @@ Configuration comes from environment variables:
 - `NIGRANI_DB`: SQLAlchemy URL. Default `sqlite:///artifacts/nigrani.db`.
 - `NIGRANI_REGISTRY`: registry path.
 - `NIGRANI_API_KEYS`: `key=user:role,...`, where role is `analyst` or `admin`.
+- `NIGRANI_DEMO=1`: read-only public demo mode.
 
 ## Frontend (`web/`)
 
@@ -112,6 +113,72 @@ Alert budgets (the thresholds are fixed on the calibration block and then applie
 
 **Drift:** the largest feature PSI is `value_z_vs_own_history` at 0.155, which falls in the "watch" band.
 
+## Real-data benchmark: Elliptic Bitcoin AML (Weber et al., 2019)
+The synthetic results can't show real-world performance, so the same method is also run on the public
+**Elliptic** dataset: 203,769 Bitcoin transactions, 234,355 payment-flow edges and 49 time steps. 4,545 of the transactions are labelled illicit and 42,019 licit.
+The baselines come from *Weber et al., "Anti-Money Laundering in Bitcoin: Experimenting with Graph Convolutional Networks for Financial Forensics", KDD '19 Workshop on Anomaly Detection in Finance, [arXiv:1908.02591](https://arxiv.org/abs/1908.02591)*, Table 1.
+
+**Protocol (same as the paper):**
+- Temporal split: train on steps 1–34, test on steps 35–49. Metrics are for the illicit class.
+- Rows: 29,894 labelled for training; 16,670 for testing, of which 1,083 are illicit.
+
+**Nigrani's additions:**
+- 37 label-free graph features: in/out degree, 2-hop reach, and neighbour mean and difference of the local features.
+- LightGBM.
+- SHAP explanations.
+- Alert-budget metrics.
+
+Run it with `make elliptic`. The data is pulled from a public mirror with no login; results go to `reports/elliptic_benchmark.json`.
+
+| Model (illicit class, test steps 35–49) | Precision | Recall | F1 |
+|---|---|---|---|
+| Paper: Logistic regression (all features) | 0.404 | 0.593 | 0.481 |
+| Paper: GCN | 0.812 | 0.512 | 0.628 |
+| Paper: Skip-GCN | 0.812 | 0.623 | 0.705 |
+| Paper: Random forest (all features) | 0.956 | 0.670 | 0.788 |
+| Paper: Random forest (all features + GCN embeddings) | 0.971 | 0.675 | 0.796 |
+| Ours: Random forest reproduction (50 trees, max_features 50) | 0.946 | 0.724 | 0.820 |
+| Ours: LightGBM, all features | 0.945 | 0.730 | 0.823 |
+| **Ours: LightGBM, all features + graph features (Nigrani)** | **0.959** | **0.727** | **0.827** |
+
+**What these numbers mean:**
+- Nigrani beats every number in the paper: F1 +0.03 over the paper's best model and +0.20 over its GCN.
+- Most of that margin is not from the graph features. Our own random-forest reproduction already scores 0.820, higher than the paper reports for the same model (later reproductions see the same thing).
+- Against our own baselines, the graph features add only +0.004 F1 and +0.001 PR-AUC. That is small. Elliptic's 72 "aggregated" features already encode 1-hop neighbourhood statistics.
+
+**Other metrics for the Nigrani model:**
+- PR-AUC 0.806, ROC-AUC 0.942.
+- Alert budget at 5% of test transactions (834 alerts): precision 0.95, recall 0.73.
+- Top SHAP features: `local_59`, `local_53`, `agg_32`.
+- F1 on steps 35–42 is 0.79–0.97, but it falls to 0.00–0.17 on steps 43–49, after the dark-market shutdown. The paper's models fail there too (Weber et al., Fig. 4). This is a real concept-drift limit; better features would not fix it, and it is what `drift_report` is meant to catch.
+
+## Subtle pump-and-dump: what was tried
+`make pump-study` ran each idea through the same 4-fold expanding CV. The untouched test block was then read **once**, for the CV winner and the baseline. Results are in `reports/pump_experiments.json`.
+
+| Variant (CV mean of 4 folds) | PR-AUC | Recall@1% | Subtle-pump recall@1% |
+|---|---|---|---|
+| Production: pattern heads | 0.947 | 0.864 | 0.563 |
+| + 10 sequence / impact-per-volume / coordinated-timing features | 0.951 | 0.872 | **0.583** |
+| + sequence features + cost-sensitive pump head (w=3) | 0.952 | 0.872 | 0.563 |
+| + sequence features + cost-sensitive pump head (w=6) | 0.950 | 0.876 | 0.563 |
+| + sequence features + reserved pump budget (25% / 40% of the queue) | 0.951 | 0.872 | 0.583 (no change: the pump head's top scores are already in the queue) |
+
+**The CV gain did not hold on test.** On the test block, the CV winner scored subtle recall 0.25 vs the baseline's 0.30, and PR-AUC 0.799 vs 0.808. The test block has only 20 subtle-pump positives, so the gap is one account-day.
+
+**Production is unchanged.** Subtle pumps are small, spread over several days, and mixed in with normal flow. Day-level features have hit their limit on this pattern. The next step is order-book or intraday features, or episode-level (multi-day) scoring.
+
+## Deploy
+- **Docker.** `docker build -t nigrani . && docker run -p 8000:8000 nigrani`. The image bakes a seeded database and registry, runs as a non-root user, has a `HEALTHCHECK`, and honours `$PORT`.
+- **Read-only public demo.** Set `NIGRANI_DEMO=1`.
+  - Keys: `demo-key` and `analyst-dev-key`. There is no admin key.
+  - Every state-changing REST call returns `403 demo_read_only`; scoring and explain still work.
+  - MCP write tools raise `PermissionError`.
+  - Run locally with `make demo`.
+- **Hosts:**
+  - Render: `render.yaml` (Blueprint, free plan).
+  - Fly.io: `fly.toml` (region `bom`, scales to zero).
+  - Hugging Face Spaces: `deploy/hf-space/push.sh <user>/nigrani` (Docker SDK, port 7860). Needs `hf auth login`.
+
 ## REST API (`/docs` for OpenAPI)
 Every route under `/v1` needs an `X-API-Key`. Analysts can read and work alerts. Only admins can sync alerts, promote models or retrain. Errors use one envelope: `{"error":{"code","message","request_id"}}`. That gives 404 for unknown ids, 409 for an invalid state transition, 401/403 for auth, and 422 for validation. Each request gets an `X-Request-ID` and a JSON log line.
 
@@ -146,12 +213,13 @@ The server also has these resources and prompts:
 A recorded real stdio session (temp DB, copied registry) is in [`docs/mcp_demo.md`](docs/mcp_demo.md). Regenerate it with `python docs/mcp_demo.py`.
 
 ## Quality
-- **Tests:** 47 tests, run with `make test`.
+- **Tests:** 53 pytest tests (`make test`) plus 6 Playwright e2e tests (`make e2e`).
   - Service: lifecycle, invalid transitions, cases, network, drift, retrain gate.
   - API: every route, auth and roles, error envelope, metrics.
   - MCP: a stdio end-to-end session through a real client, plus in-process calls.
   - Pipeline: a small generate → features → train run.
-- **Coverage:** **94%** line coverage. CI fails under 85%. `train.py` is at 60% because the full CV run is too slow for unit tests; the pipeline test covers a reduced run.
+- **Coverage:** **90%** line coverage. CI fails under 85%. `train.py`, `elliptic.py` and `pump_experiments.py` are at 42–60%, because their full runs are too slow for unit tests (minutes, and 690 MB of data). Their helpers are unit-tested, and the full runs are reproduced with `make train`, `make elliptic` and `make pump-study`.
+- **Docker:** the image was built and smoke-tested (`/health`, `/dashboard`, the MCP stdio session with 23 tools, Docker `HEALTHCHECK` healthy, and demo-mode 403s).
 - **Linting and types:** ruff is clean, and the code has type hints throughout.
 - **CI:** the workflow is in `ci/github-actions-ci.yml`. Copy it to `.github/workflows/` to enable it.
 
@@ -165,16 +233,18 @@ A recorded real stdio session (temp DB, copied registry) is in [`docs/mcp_demo.m
 ## Limitations
 - The data is **synthetic**. The numbers show the method works, not production performance.
 - The test set has 69 positives, so differences of about 0.03 PR-AUC are within noise.
-- No order-book data, so spoofing and layering aren't covered. Subtle-pump recall is still only 0.30.
+- No order-book data, so spoofing and layering aren't covered. Subtle-pump recall is still only 0.30. Sequence, cost-sensitive and per-pattern-budget variants were tried and gave no test gain (see above).
+- On real data (Elliptic), the method's lead over the paper's baselines mostly comes from gradient boosting. The graph features add little there, and all models collapse after the step-43 regime change.
 - The retrained version's test metrics are marked "not re-evaluated". Test is read once.
 - SQLite is used for the demo. The SQLAlchemy layer is Postgres-ready but hasn't been tested on Postgres.
-- The Dockerfile has not been built here (no Docker daemon). There's no GNN benchmark yet.
+- No GNN is trained here. The GCN comparison uses the paper's published numbers.
 
 ## Repo
 ```
-nigrani/  generate.py features.py models.py registry.py train.py db.py service.py schemas.py api.py mcp_server.py static/dashboard.html
+nigrani/  generate.py features.py models.py elliptic.py pump_experiments.py registry.py train.py db.py service.py schemas.py api.py mcp_server.py static/dashboard.html
 tests/    conftest.py test_service.py test_api.py test_mcp.py test_pipeline.py
-reports/  metrics.json pr_curves.png shap_importance.png
+reports/  metrics.json elliptic_benchmark.json pump_experiments.json pr_curves.png shap_importance.png
+deploy/   hf-space/ · render.yaml · fly.toml
 docs/     dashboard_alerts.png mcp_demo.md mcp_demo.py
 ci/github-actions-ci.yml · Dockerfile · Makefile · pyproject.toml
 ```

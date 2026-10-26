@@ -15,6 +15,11 @@ from mcp.server.mcpserver.exceptions import ToolError
 from nigrani.service import InvalidTransition, NotFound, get_service
 
 ACTOR = os.environ.get("NIGRANI_MCP_ACTOR", "mcp-analyst")
+DEMO = os.environ.get("NIGRANI_DEMO", "").lower() in {"1", "true", "yes"}
+
+
+def _writable() -> None:
+    if DEMO: raise PermissionError("read-only public demo (NIGRANI_DEMO=1): write tools are disabled")
 mcp = MCPServer("nigrani-surveillance", instructions=(
     "Trade-surveillance copilot. Start with list_alerts, then explain_alert, get_account_timeline and "
     "get_counterparty_network before drafting a note. Scores are model output, not findings of fact; never "
@@ -65,24 +70,28 @@ def explain_alert(alert_id: str, top_k: int = 8) -> dict[str, Any]:
 @mcp.tool()
 def assign_alert(alert_id: str, assignee: str) -> dict[str, Any]:
     """Assign an open/assigned/escalated alert to an analyst."""
+    _writable()
     return svc().assign(alert_id, assignee, ACTOR)
 
 
 @mcp.tool()
 def escalate_alert(alert_id: str, reason: str) -> dict[str, Any]:
     """Escalate an alert to compliance with a written reason (min 5 chars). Raises priority to high."""
+    _writable()
     return svc().escalate(alert_id, reason, ACTOR)
 
 
 @mcp.tool()
 def close_alert(alert_id: str, disposition: str, note: str = "") -> dict[str, Any]:
     """Close an alert with disposition true_positive | false_positive | benign_explained. The disposition becomes a training label."""
+    _writable()
     return svc().close(alert_id, disposition, ACTOR, note)
 
 
 @mcp.tool()
 def record_feedback(alert_id: str, verdict: str, note: str = "") -> dict[str, Any]:
     """Record an analyst verdict without closing (true_positive | false_positive | benign_explained | needs_more_info)."""
+    _writable()
     return svc().record_feedback(alert_id, verdict, ACTOR, note)
 
 
@@ -127,6 +136,7 @@ def get_account_trades(account: int, date: str, limit: int = 50) -> list[dict[st
 @mcp.tool()
 def create_case(title: str, alert_ids: list[str], summary: str = "") -> dict[str, Any]:
     """Open an investigation case grouping one or more alerts."""
+    _writable()
     return svc().create_case(title, alert_ids, ACTOR, summary=summary)
 
 
@@ -145,12 +155,14 @@ def get_case(case_id: int) -> dict[str, Any]:
 @mcp.tool()
 def add_case_note(case_id: int, body: str) -> dict[str, Any]:
     """Append a note to a case."""
+    _writable()
     return svc().add_case_note(case_id, body, ACTOR)
 
 
 @mcp.tool()
 def update_case_status(case_id: int, status: str) -> dict[str, Any]:
     """Move a case to open | under_review | str_filed | closed_no_action (the last two are final)."""
+    _writable()
     return svc().update_case(case_id, ACTOR, status=status)
 
 
@@ -182,6 +194,7 @@ def drift_report(recent_days: int | None = None) -> dict[str, Any]:
 @mcp.tool()
 def sync_alerts(budget: str = "1.0%") -> dict[str, Any]:
     """Generate alerts from the production model's live-period scores at an alert budget (0.5% | 1.0% | 2.0%). Idempotent."""
+    _writable()
     return svc().sync_alerts(budget)
 
 

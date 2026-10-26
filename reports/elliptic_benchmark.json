@@ -1,0 +1,327 @@
+{
+  "dataset": "Elliptic Bitcoin (203,769 txs, 234,355 edges, 49 steps; 4,545 illicit / 42,019 licit labelled)",
+  "source": "https://huggingface.co/datasets/yhoma/elliptic-bitcoin-dataset/",
+  "paper": "Weber et al. 2019, arXiv:1908.02591, Table 1",
+  "split": {
+    "train_steps": "1-34",
+    "val_steps_for_threshold": "30-34",
+    "test_steps": "35-49",
+    "train_labelled": 29894,
+    "test_labelled": 16670,
+    "test_illicit": 1083
+  },
+  "paper_baselines": {
+    "LogReg AF": {
+      "precision": 0.404,
+      "recall": 0.593,
+      "f1": 0.481
+    },
+    "RF AF": {
+      "precision": 0.956,
+      "recall": 0.67,
+      "f1": 0.788
+    },
+    "RF AF+NE": {
+      "precision": 0.971,
+      "recall": 0.675,
+      "f1": 0.796
+    },
+    "MLP AF": {
+      "precision": 0.694,
+      "recall": 0.617,
+      "f1": 0.653
+    },
+    "GCN": {
+      "precision": 0.812,
+      "recall": 0.512,
+      "f1": 0.628
+    },
+    "Skip-GCN": {
+      "precision": 0.812,
+      "recall": 0.623,
+      "f1": 0.705
+    }
+  },
+  "results": {
+    "LogReg AF (repro)": {
+      "default_0.5": {
+        "precision": 0.2914,
+        "recall": 0.6537,
+        "f1": 0.4031,
+        "pr_auc": 0.3601,
+        "roc_auc": 0.8911,
+        "threshold": 0.5,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 0.4251,
+          "recall": 0.0656
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.476,
+          "recall": 0.3666
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.3779,
+          "recall": 0.5817
+        }
+      },
+      "val_tuned": {
+        "precision": 0.4602,
+        "recall": 0.4958,
+        "f1": 0.4773,
+        "pr_auc": 0.3601,
+        "roc_auc": 0.8911,
+        "threshold": 0.7722,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 0.4251,
+          "recall": 0.0656
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.476,
+          "recall": 0.3666
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.3779,
+          "recall": 0.5817
+        }
+      },
+      "n_features": 165
+    },
+    "RF AF (repro, 50 trees / 50 feats)": {
+      "default_0.5": {
+        "precision": 0.9457,
+        "recall": 0.7239,
+        "f1": 0.8201,
+        "pr_auc": 0.7799,
+        "roc_auc": 0.9055,
+        "threshold": 0.5,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 1.0,
+          "recall": 0.1542
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.94,
+          "recall": 0.7239
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.4847,
+          "recall": 0.7461
+        }
+      },
+      "val_tuned": {
+        "precision": 0.9858,
+        "recall": 0.7045,
+        "f1": 0.8218,
+        "pr_auc": 0.7799,
+        "roc_auc": 0.9055,
+        "threshold": 0.64,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 1.0,
+          "recall": 0.1542
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.94,
+          "recall": 0.7239
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.4847,
+          "recall": 0.7461
+        }
+      },
+      "n_features": 165
+    },
+    "LightGBM AF": {
+      "default_0.5": {
+        "precision": 0.945,
+        "recall": 0.7295,
+        "f1": 0.8233,
+        "pr_auc": 0.8046,
+        "roc_auc": 0.9405,
+        "threshold": 0.5,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 1.0,
+          "recall": 0.1542
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.9472,
+          "recall": 0.7295
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.4919,
+          "recall": 0.7572
+        }
+      },
+      "val_tuned": {
+        "precision": 0.9394,
+        "recall": 0.7295,
+        "f1": 0.8212,
+        "pr_auc": 0.8046,
+        "roc_auc": 0.9405,
+        "threshold": 0.4623,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 1.0,
+          "recall": 0.1542
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.9472,
+          "recall": 0.7295
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.4919,
+          "recall": 0.7572
+        }
+      },
+      "n_features": 165
+    },
+    "LightGBM AF+graph (Nigrani)": {
+      "default_0.5": {
+        "precision": 0.9586,
+        "recall": 0.7267,
+        "f1": 0.8267,
+        "pr_auc": 0.8058,
+        "roc_auc": 0.9416,
+        "threshold": 0.5,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 1.0,
+          "recall": 0.1542
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.9484,
+          "recall": 0.7304
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.4955,
+          "recall": 0.7627
+        }
+      },
+      "val_tuned": {
+        "precision": 0.9169,
+        "recall": 0.7331,
+        "f1": 0.8148,
+        "pr_auc": 0.8058,
+        "roc_auc": 0.9416,
+        "threshold": 0.3014,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 1.0,
+          "recall": 0.1542
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.9484,
+          "recall": 0.7304
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.4955,
+          "recall": 0.7627
+        }
+      },
+      "n_features": 234
+    },
+    "RF AF+graph": {
+      "default_0.5": {
+        "precision": 0.9334,
+        "recall": 0.7248,
+        "f1": 0.816,
+        "pr_auc": 0.7849,
+        "roc_auc": 0.9137,
+        "threshold": 0.5,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 1.0,
+          "recall": 0.1542
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.9412,
+          "recall": 0.7248
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.4847,
+          "recall": 0.7461
+        }
+      },
+      "val_tuned": {
+        "precision": 0.6229,
+        "recall": 0.7396,
+        "f1": 0.6762,
+        "pr_auc": 0.7849,
+        "roc_auc": 0.9137,
+        "threshold": 0.3167,
+        "budget_1pct": {
+          "alerts": 167,
+          "precision": 1.0,
+          "recall": 0.1542
+        },
+        "budget_5pct": {
+          "alerts": 834,
+          "precision": 0.9412,
+          "recall": 0.7248
+        },
+        "budget_10pct": {
+          "alerts": 1667,
+          "precision": 0.4847,
+          "recall": 0.7461
+        }
+      },
+      "n_features": 234
+    }
+  },
+  "selected": "LightGBM AF+graph (Nigrani)",
+  "f1_by_test_step": {
+    "35": 0.967,
+    "36": 0.846,
+    "37": 0.812,
+    "38": 0.944,
+    "39": 0.949,
+    "40": 0.789,
+    "41": 0.965,
+    "42": 0.875,
+    "43": 0.0,
+    "44": 0.062,
+    "45": 0.0,
+    "46": 0.167,
+    "47": 0.0,
+    "48": 0.0,
+    "49": 0.032
+  },
+  "graph_features": 69,
+  "shap_top": {
+    "local_59": 0.6246,
+    "local_53": 0.6193,
+    "agg_32": 0.3451,
+    "local_61": 0.3083,
+    "local_55": 0.3008,
+    "local_90": 0.2618,
+    "local_5": 0.2495,
+    "local_3": 0.2484,
+    "local_65": 0.2451,
+    "agg_70": 0.2432,
+    "local_58": 0.2317,
+    "local_76": 0.2126
+  },
+  "runtime_s": 74.6,
+  "note": "Steps 43+ follow a dark-market shutdown; every published model collapses there (Weber et al. Fig. 4)."
+}

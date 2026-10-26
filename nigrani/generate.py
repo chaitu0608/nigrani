@@ -6,6 +6,7 @@ The patterns below mirror typologies described in SEBI orders: wash/self trades,
 trading rings, and pump-and-dump in illiquid scrips. Everything is seeded and reproducible.
 """
 import argparse
+import os
 
 import numpy as np
 import pandas as pd
@@ -104,5 +105,5 @@ def generate(n_accounts=2000, n_symbols=60, n_days=120, seed=7):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--seed", type=int, default=7); a = ap.parse_args()
     t, acc = generate(seed=a.seed)
-    t.to_parquet("data/trades.parquet"); acc.to_parquet("data/accounts.parquet")
+    os.makedirs("data", exist_ok=True); t.to_parquet("data/trades.parquet"); acc.to_parquet("data/accounts.parquet")
     print(len(t), "trades;", t.label.mean().round(4), "manipulative share;", t.typology.value_counts().to_dict())

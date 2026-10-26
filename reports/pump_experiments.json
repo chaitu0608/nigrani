@@ -1,0 +1,91 @@
+{
+  "cv_mean_4_folds": {
+    "baseline_pattern_heads": {
+      "pr_auc": 0.9468,
+      "recall_at_1pct": 0.8637,
+      "precision_at_100": 0.54,
+      "subtle_recall_at_1pct": 0.5625,
+      "pump_recall_at_1pct": 0.935
+    },
+    "+sequence_features": {
+      "pr_auc": 0.9509,
+      "recall_at_1pct": 0.8719,
+      "precision_at_100": 0.5375,
+      "subtle_recall_at_1pct": 0.5834,
+      "pump_recall_at_1pct": 0.9275
+    },
+    "+seq +cost_sensitive_w3": {
+      "pr_auc": 0.9521,
+      "recall_at_1pct": 0.8718,
+      "precision_at_100": 0.5325,
+      "subtle_recall_at_1pct": 0.5625,
+      "pump_recall_at_1pct": 0.94
+    },
+    "+seq +cost_sensitive_w6": {
+      "pr_auc": 0.9503,
+      "recall_at_1pct": 0.8759,
+      "precision_at_100": 0.535,
+      "subtle_recall_at_1pct": 0.5625,
+      "pump_recall_at_1pct": 0.96
+    },
+    "+seq +pump_budget_25pct": {
+      "pr_auc": 0.9509,
+      "recall_at_1pct": 0.8719,
+      "precision_at_100": 0.5375,
+      "subtle_recall_at_1pct": 0.5834,
+      "pump_recall_at_1pct": 0.9275
+    },
+    "+seq +pump_budget_40pct": {
+      "pr_auc": 0.9509,
+      "recall_at_1pct": 0.8719,
+      "precision_at_100": 0.5375,
+      "subtle_recall_at_1pct": 0.5834,
+      "pump_recall_at_1pct": 0.9275
+    },
+    "+seq +w3 +pump_budget_25pct": {
+      "pr_auc": 0.9521,
+      "recall_at_1pct": 0.8718,
+      "precision_at_100": 0.5325,
+      "subtle_recall_at_1pct": 0.5625,
+      "pump_recall_at_1pct": 0.94
+    }
+  },
+  "selection_rule": "max CV subtle recall@1% s.t. overall recall@1% >= baseline - 0.01",
+  "cv_winner": "+sequence_features",
+  "test_read_once": {
+    "baseline_pattern_heads": {
+      "pr_auc": 0.8082,
+      "recall_at_1pct": 0.7826,
+      "precision_at_100": 0.55,
+      "by_type": {
+        "circular": 1.0,
+        "pump_dump": 0.96,
+        "pump_dump_subtle": 0.3,
+        "wash": 1.0
+      }
+    },
+    "+sequence_features": {
+      "pr_auc": 0.7994,
+      "recall_at_1pct": 0.7681,
+      "precision_at_100": 0.53,
+      "by_type": {
+        "circular": 1.0,
+        "pump_dump": 0.96,
+        "pump_dump_subtle": 0.25,
+        "wash": 1.0
+      }
+    }
+  },
+  "new_features": [
+    "impact_per_vol",
+    "impact_5d",
+    "ret_5d_mean",
+    "sync_5d_max",
+    "coord_5d_max",
+    "streak_5d_max",
+    "active_days_5d",
+    "impact_lag1",
+    "buy_bal_5d",
+    "peer_day_sync"
+  ]
+}

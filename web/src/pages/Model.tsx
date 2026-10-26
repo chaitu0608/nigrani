@@ -52,6 +52,11 @@ export default function Model() {
               </tr>))}</tbody>
           </table></div>
         </Card>
+        {c?.external_benchmarks?.elliptic && (() => { const e = c.external_benchmarks.elliptic!; const rows: [string, number, boolean][] = [["Nigrani · LightGBM + graph", e.nigrani.f1, true], ["Paper · Random forest", e.paper_best_rf_f1, false], ["Paper · GCN", e.paper_gcn_f1, false]];
+          return <Card data-testid="real-benchmark"><CardHeader title="Real-data benchmark · Elliptic Bitcoin AML" hint={`illicit F1, test steps 35–49 · ${e.paper}`} />
+            <div className="space-y-2 px-5 pb-5">{rows.map(([k, v, me]) => (
+              <div key={k} className="grid grid-cols-[minmax(0,1fr)_160px_48px] items-center gap-3 text-[13px]"><span className={cn("truncate", me ? "text-fg" : "text-fg-2")}>{k}</span><div className="h-1.5 rounded-full bg-bg-3"><div className={cn("h-full rounded-full", me ? "bg-accent" : "bg-fg-3")} style={{ width: `${v * 100}%` }} /></div><span className="tnum text-right font-mono text-xs text-fg-3">{v.toFixed(3)}</span></div>))}
+              <p className="pt-1 text-xs text-fg-3">precision {e.nigrani.precision.toFixed(3)} · recall {e.nigrani.recall.toFixed(3)} · PR-AUC {e.nigrani.pr_auc.toFixed(3)}. Same temporal split as the paper.</p></div></Card>; })()}
         <div className="grid gap-5 lg:grid-cols-2">
           <Card><CardHeader title="Feature drift" hint={drift.data ? `PSI · ${drift.data.current.join(" → ")} vs ${drift.data.reference.join(" → ")}` : ""} />
             <div className="space-y-2 px-5 pb-5">
