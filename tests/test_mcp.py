@@ -44,7 +44,7 @@ def test_mcp_stdio_end_to_end(tmp_path: Path):
             assert (await call("close_alert", {"alert_id": aid, "disposition": "true_positive"}))["status"] == "closed"
             ev = (await call("get_alert", {"alert_id": aid}))["events"]; assert ev[-1]["actor"] == "copilot"
             assert (await call("model_card"))["version"] and "psi" in await call("drift_report")
-            bad = await s.call_tool("get_alert", {"alert_id": "2020-01-01:1"}); assert bad.is_error
+            bad = await s.call_tool("get_alert", {"alert_id": "2020-01-01:1"}); assert bad.is_error and "not_found" in bad.content[0].text
 
             uris = {str(x.uri) for x in (await s.list_resources()).resources}; assert "nigrani://model-card" in uris
             tmpl = {x.uri_template for x in (await s.list_resource_templates()).resource_templates}

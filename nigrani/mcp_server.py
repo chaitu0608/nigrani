@@ -10,8 +10,9 @@ import os
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
-from nigrani.service import get_service
+from nigrani.service import InvalidTransition, NotFound, get_service
 
 ACTOR = os.environ.get("NIGRANI_MCP_ACTOR", "mcp-analyst")
 mcp = MCPServer("nigrani-surveillance", instructions=(
@@ -20,7 +21,25 @@ mcp = MCPServer("nigrani-surveillance", instructions=(
     "close an alert as true_positive without the analyst's confirmation."))
 
 
-def svc() -> Any: return get_service()
+class _Guarded:
+    """Proxy over the service: domain errors become ToolErrors so the model sees the real reason."""
+
+    def __getattr__(self, name: str) -> Any:
+        fn = getattr(get_service(), name)
+
+        def call(*a: Any, **k: Any) -> Any:
+            try:
+                return fn(*a, **k)
+            except NotFound as e:
+                raise ToolError(f"not_found: {e}") from e
+            except InvalidTransition as e:
+                raise ToolError(f"invalid_transition: {e}") from e
+            except ValueError as e:
+                raise ToolError(f"bad_request: {e}") from e
+        return call
+
+
+def svc() -> Any: return _Guarded()
 
 
 # ---------------------------------------------------------------- alerts

@@ -4,6 +4,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm 
 COPY requirements.txt . 
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN python -m nigrani.generate && python -m nigrani.features && python -m nigrani.experiments && python -m nigrani.train
+RUN python -m nigrani.generate && python -m nigrani.features && python -m nigrani.train
+ENV NIGRANI_DB=sqlite:////app/artifacts/nigrani.db
+RUN python -c "from nigrani.service import get_service; get_service().sync_alerts()"
 EXPOSE 8000
 CMD ["uvicorn", "nigrani.api:app", "--host", "0.0.0.0", "--port", "8000"]
