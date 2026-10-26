@@ -1,5 +1,9 @@
 # Nigrani: explainable trade surveillance and AML copilot for a stockbroker
 
+[![Live demo](https://img.shields.io/badge/live%20demo-nigrani--demo.onrender.com-6d5dfc?style=for-the-badge)](https://nigrani-demo.onrender.com)
+
+**▶ Try it live: [https://nigrani-demo.onrender.com](https://nigrani-demo.onrender.com)** (console at [/dashboard](https://nigrani-demo.onrender.com/dashboard); read-only, API key `demo-key`; free tier, so the first load after idle takes ~30–60 s).
+
 *Nigrani* (निगरानी) means "surveillance". Nigrani scores every **client account-day** for **wash trades, circular rings and pump-and-dump**. It turns the top scores into an **alert queue sized to the desk's review budget** and explains every alert with SHAP. Analysts work the full lifecycle (assign → escalate → close → case → STR decision) through a REST API, a web console, or an **MCP server** from Claude Desktop or Cursor. Their dispositions feed a **gated retraining loop**.
 
 > The model decides the score. The LLM fetches, explains and drafts. A human files.
@@ -175,7 +179,7 @@ Run it with `make elliptic`. The data is pulled from a public mirror with no log
   - MCP write tools raise `PermissionError`.
   - Run locally with `make demo`.
 - **Hosts:**
-  - Render: `render.yaml` (Blueprint, free plan).
+  - Render (**live** at https://nigrani-demo.onrender.com): `render.yaml` (Blueprint, free plan) builds `Dockerfile.render`, which copies seeded artifacts from `deploy/bake/` instead of training, because the free builder stalls on training.
   - Fly.io: `fly.toml` (region `bom`, scales to zero).
   - Hugging Face Spaces: `deploy/hf-space/push.sh <user>/nigrani` (Docker SDK, port 7860). Needs `hf auth login`.
 
