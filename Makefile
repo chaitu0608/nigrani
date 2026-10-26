@@ -8,3 +8,7 @@ lint: ; .venv/bin/ruff check nigrani tests docs
 test: ; $(PY) -m pytest -q tests --cov=nigrani --cov-report=term
 serve: ; .venv/bin/uvicorn nigrani.api:app --port 8000
 mcp: ; $(PY) -m nigrani.mcp_server
+web-install: ; cd web && npm ci
+web-build: ; cd web && npm run build
+web-dev: ; cd web && npm run dev
+shots: ; cd web && node scripts/shots.mjs http://localhost:8011

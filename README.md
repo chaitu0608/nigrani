@@ -4,7 +4,13 @@
 
 > The model decides the score. The LLM fetches, explains and drafts. A human files.
 
-![analyst console](docs/dashboard_alerts.png)
+![landing](docs/screens/01-landing-hero.png)
+
+| Alert queue + SHAP | Account network | Case board |
+|---|---|---|
+| ![](docs/screens/05-alert-detail.png) | ![](docs/screens/06-network.png) | ![](docs/screens/07-cases.png) |
+| **Overview** | **Model card** | **⌘K palette / light mode** |
+| ![](docs/screens/03-overview.png) | ![](docs/screens/08-model.png) | ![](docs/screens/09-command-palette.png) |
 
 ## Architecture
 ```mermaid
@@ -37,6 +43,14 @@ Configuration comes from environment variables:
 - `NIGRANI_DB`: SQLAlchemy URL. Default `sqlite:///artifacts/nigrani.db`.
 - `NIGRANI_REGISTRY`: registry path.
 - `NIGRANI_API_KEYS`: `key=user:role,...`, where role is `analyst` or `admin`.
+
+## Frontend (`web/`)
+
+Vite + React 19 + TypeScript + Tailwind v4, shadcn-style primitives (Radix + cva), `motion`, lucide, Geist, recharts, react-force-graph, cmdk, sonner. Dark-first with a light toggle and one accent colour. Talks only to the real `/v1` API (key `analyst-dev-key`; `admin-dev-key` for promote/retrain).
+
+- `/` landing page: the SEBI problem, the pipeline, real model-card metrics fetched live, the three patterns, and a real MCP transcript from `docs/mcp_demo.md`.
+- `/dashboard` overview (queue stats, today's top risk), `/dashboard/queue` keyboard triage (`j/k`, `/`, `a` assign, `e` escalate, `c` close, `d` draft, `1-5` tabs), `/dashboard/cases` drag-and-drop board, `/dashboard/model`. `⌘K` everywhere, `g o/q/c/m` to navigate. The old page lives at `/dashboard/legacy`.
+- `make web-install web-build` writes the build to `nigrani/static/app` (committed), which FastAPI serves. `make web-dev` runs Vite with a `/v1` proxy. `make shots` regenerates `docs/screens/` with headless Playwright at 1440×900.
 
 ## Data and why it's synthetic
 Real broker client trades are confidential. The public labelled AML sets (IBM AMLworld, Elliptic) cover bank transfers and Bitcoin, not exchange trades. `generate.py` builds a **seeded** tape instead: 2,000 accounts, 60 symbols, 120 trading days and 317,282 trades. Its typologies follow SEBI enforcement orders.

@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #fbfbfa; --bg-2: #ffffff; --bg-3: #f4f4f2; --fg: #0b0b0c; --fg-2: #4a4a50; --fg-3: #8a8a92;
+  --line: #e7e7e4; --line-2: #dadad6; --accent: #5b5bd6; --accent-fg: #ffffff; --accent-soft: rgba(91,91,214,.09);
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.08);
+}
+.dark {
+  --bg: #08090a; --bg-2: #0e0f11; --bg-3: #15161a; --fg: #f3f3f4; --fg-2: #a3a3ab; --fg-3: #66666f;
+  --line: #1c1d21; --line-2: #26272c; --accent: #7c7fff; --accent-fg: #0b0b12; --accent-soft: rgba(124,127,255,.12);
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 32px -16px rgba(0,0,0,.6);
+}
+
+@theme inline {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --color-bg: var(--bg); --color-bg-2: var(--bg-2); --color-bg-3: var(--bg-3);
+  --color-fg: var(--fg); --color-fg-2: var(--fg-2); --color-fg-3: var(--fg-3);
+  --color-line: var(--line); --color-line-2: var(--line-2);
+  --color-accent: var(--accent); --color-accent-fg: var(--accent-fg); --color-accent-soft: var(--accent-soft);
+  --shadow-card: var(--shadow);
+}
+
+html, body, #root { height: 100%; }
+body { @apply bg-bg text-fg font-sans antialiased; font-feature-settings: "ss01", "cv11"; text-rendering: optimizeLegibility; }
+::selection { background: var(--accent-soft); }
+* { border-color: var(--line); }
+.tnum { font-variant-numeric: tabular-nums; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 10px; border: 3px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+.grid-bg {
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+@keyframes dash { to { stroke-dashoffset: -20; } }
+.flow-dash { stroke-dasharray: 4 6; animation: dash 1.2s linear infinite; }

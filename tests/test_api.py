@@ -12,7 +12,8 @@ def feats(svc, hi=True):
 def test_public_ops(client):
     assert client.get("/health").json()["status"] == "ok"
     r = client.get("/ready"); assert r.status_code == 200 and r.json()["ready"]
-    assert "Nigrani" in client.get("/dashboard").text and client.get("/", follow_redirects=False).status_code == 307
+    assert "Nigrani" in client.get("/dashboard").text and "Nigrani" in client.get("/").text
+    assert client.get("/dashboard/queue/2026-06-08:452").status_code == 200 and "Nigrani" in client.get("/dashboard/legacy").text
     client.get("/v1/alerts", headers=ANALYST)
     m = client.get("/metrics").text
     assert "nigrani_http_requests_total" in m and 'nigrani_alerts{status="open"}' in m and "nigrani_model_info" in m and "_bucket" in m

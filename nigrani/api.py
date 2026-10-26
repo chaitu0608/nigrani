@@ -12,7 +12,8 @@ from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 from nigrani import schemas as S
 from nigrani.service import InvalidTransition, NotFound, SurveillanceService, get_service
@@ -105,8 +106,16 @@ async def _fnf(request: Request, e: FileNotFoundError) -> JSONResponse: return _
 
 
 # ------------------------------------------------------------------ public
+APP_DIR = STATIC / "app"  # React build output (web/ -> npm run build)
+
+
+def _spa() -> FileResponse:
+    idx = APP_DIR / "index.html"
+    return FileResponse(idx if idx.exists() else STATIC / "dashboard.html")
+
+
 @app.get("/", include_in_schema=False)
-def root() -> RedirectResponse: return RedirectResponse("/dashboard")
+def root() -> FileResponse: return _spa()
 
 
 @app.get("/health", tags=["ops"])
@@ -140,8 +149,17 @@ def metrics(svc: Svc) -> str:
     return "\n".join(lines) + "\n"
 
 
+@app.get("/dashboard/legacy", include_in_schema=False)
+def dashboard_legacy() -> FileResponse: return FileResponse(STATIC / "dashboard.html")
+
+
 @app.get("/dashboard", include_in_schema=False)
-def dashboard() -> FileResponse: return FileResponse(STATIC / "dashboard.html")
+@app.get("/dashboard/{path:path}", include_in_schema=False)
+def dashboard(path: str = "") -> FileResponse: return _spa()
+
+
+if (APP_DIR / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=APP_DIR / "assets"), name="assets")
 
 
 # ------------------------------------------------------------------ v1 API
