@@ -24,7 +24,7 @@ export default function Queue() {
   useEffect(() => { listRef.current?.querySelector(`[data-i="${cur}"]`)?.scrollIntoView({ block: "nearest" }); }, [cur]);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement; if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector("[role=dialog]")) return;
+      const t = e.target as HTMLElement; if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector("[role=dialog][data-state=open]")) return;
       if (t.tagName === "INPUT") { if (e.key === "Escape") (t as HTMLInputElement).blur(); return; }
       if (t.tagName === "TEXTAREA") return;
       const go = (i: number) => { const n = Math.max(0, Math.min(items.length - 1, i)); setCur(n); if (items[n]) nav(`/dashboard/queue/${items[n].alert_id}${location.search}`, { replace: true }); };
@@ -77,7 +77,7 @@ export default function Queue() {
 
 function Row({ a, i, active, cursor, onClick }: { a: Alert; i: number; active: boolean; cursor: boolean; onClick: () => void }) {
   return (
-    <button data-i={i} onClick={onClick} className={cn("relative block w-full rounded-lg px-3 py-2.5 text-left transition-colors", active ? "bg-bg-3" : "hover:bg-bg-3/60", cursor && !active && "ring-1 ring-inset ring-line-2")}>
+    <button data-i={i} data-alert-id={a.alert_id} onClick={onClick} className={cn("relative block w-full rounded-lg px-3 py-2.5 text-left transition-colors", active ? "bg-bg-3" : "hover:bg-bg-3/60", cursor && !active && "ring-1 ring-inset ring-line-2")}>
       {active && <motion.span layoutId="q-active" className="absolute left-0 top-2.5 bottom-2.5 w-[2px] rounded-full bg-accent" />}
       <div className="flex items-center gap-2">
         <span className="text-[13px] font-medium">Account {a.account}</span>

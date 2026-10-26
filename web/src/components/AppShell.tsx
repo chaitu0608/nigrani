@@ -25,7 +25,7 @@ export function AppShell() {
   useEffect(() => setMobile(false), [loc.pathname]);
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement; if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || e.metaKey || e.ctrlKey || document.querySelector("[role=dialog]")) return;
+      const t = e.target as HTMLElement; if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || e.metaKey || e.ctrlKey || document.querySelector("[role=dialog][data-state=open]")) return;
       if (e.key === "g") { g.current = Date.now(); return; }
       if (Date.now() - g.current < 800) { const n = NAV.find((x) => x.key === e.key); if (n) { nav(n.to); g.current = 0; } }
     };

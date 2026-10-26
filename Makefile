@@ -12,3 +12,4 @@ web-install: ; cd web && npm ci
 web-build: ; cd web && npm run build
 web-dev: ; cd web && npm run dev
 shots: ; cd web && node scripts/shots.mjs http://localhost:8011
+e2e: ; cd web && npm run e2e

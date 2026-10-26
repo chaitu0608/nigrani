@@ -33,7 +33,7 @@ export default function Cases() {
         {COLS.map((col) => {
           const list = items.filter((c) => c.status === col.id);
           return (
-            <div key={col.id} onDragOver={(e) => { e.preventDefault(); setOver(col.id); }} onDragLeave={() => setOver(null)}
+            <div key={col.id} data-col={col.id} onDragOver={(e) => { e.preventDefault(); setOver(col.id); }} onDragLeave={() => setOver(null)}
               onDrop={() => { const c = items.find((x) => x.case_id === drag); if (c) move(c, col.id); setDrag(null); setOver(null); }}
               className={cn("flex min-h-[420px] flex-col rounded-xl border bg-bg-2/50 p-2 transition-colors", over === col.id ? "border-accent/50 bg-accent-soft" : "border-line")}>
               <div className="flex items-center gap-2 px-2 pb-3 pt-1.5">
@@ -44,7 +44,7 @@ export default function Cases() {
               <div className="space-y-2">
                 {cases.loading && col.id === "open" && <Skeleton className="h-28 w-full rounded-xl" />}
                 {list.map((c) => (
-                  <motion.div layout layoutId={`case-${c.case_id}`} key={c.case_id} draggable onDragStart={() => setDrag(c.case_id)} onClick={() => setSel(c)}
+                  <motion.div layout layoutId={`case-${c.case_id}`} key={c.case_id} data-case-id={c.case_id} draggable onDragStart={() => setDrag(c.case_id)} onClick={() => setSel(c)}
                     className="cursor-grab rounded-xl border border-line bg-bg-2 p-3.5 shadow-card transition-colors hover:border-line-2 active:cursor-grabbing">
                     <div className="mb-2 flex items-center gap-2 text-[11px] text-fg-3"><span className="font-mono">#{c.case_id}</span><span>·</span><span>{ago(c.updated_at)}</span><span className="ml-auto">{c.owner}</span></div>
                     <div className="text-[13px] font-medium leading-snug">{c.title}</div>

@@ -166,7 +166,7 @@ export function useHotkey(key: string, fn: (e: KeyboardEvent) => void, deps: Rea
       const t = e.target as HTMLElement;
       if (!opts.meta && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       if (opts.meta ? (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === key : !e.metaKey && !e.ctrlKey && !e.altKey && e.key === key) {
-        if (document.querySelector("[role=dialog]") && !opts.meta) return;
+        if (document.querySelector("[role=dialog][data-state=open]") && !opts.meta) return;
         e.preventDefault(); fn(e);
       }
     };

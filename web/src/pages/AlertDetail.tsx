@@ -29,7 +29,7 @@ export default function AlertDetail({ id, me, onBack, onChanged, onNext }: { id:
   const assign = async () => { if (!a || !me) return; try { await api.assign(a.alert_id, me); changed(`Assigned to ${me}`, `Account ${a.account}`); } catch (e) { err(e); } };
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement; if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || e.metaKey || e.ctrlKey || document.querySelector("[role=dialog]") || !a) return;
+      const t = e.target as HTMLElement; if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || e.metaKey || e.ctrlKey || document.querySelector("[role=dialog][data-state=open]") || !a) return;
       if (e.key === "a" && a.status !== "closed") assign();
       else if (e.key === "e" && a.status !== "closed" && a.status !== "escalated") setDlg("escalate");
       else if (e.key === "c" && a.status !== "closed") setDlg("close");
@@ -42,7 +42,7 @@ export default function AlertDetail({ id, me, onBack, onChanged, onNext }: { id:
   if (!a) return <div className="space-y-4 p-8"><Skeleton className="h-7 w-64" /><Skeleton className="h-4 w-96" /><Skeleton className="mt-6 h-72 w-full" /></div>;
   const ex = a.explanation;
   return (
-    <div className="mx-auto max-w-[1100px] px-6 pb-16 pt-6 lg:px-8">
+    <div data-testid="alert-detail" className="mx-auto max-w-[1100px] px-6 pb-16 pt-6 lg:px-8">
       {onBack && <Button variant="ghost" size="sm" className="-ml-2 mb-3" onClick={onBack}><ArrowLeft className="h-3.5 w-3.5" />Queue</Button>}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -162,6 +162,15 @@ function TradesTab({ a }: { a: AD }) {
   );
 }
 
+function Opt<T extends string>({ v, cur, set, title, desc }: { v: T; cur: T; set: (v: T) => void; title: string; desc: string }) {
+  return (
+    <button type="button" onClick={() => set(v)} className={cn("flex w-full items-start gap-3 rounded-xl border p-3 text-left transition", cur === v ? "border-accent/50 bg-accent-soft" : "border-line-2 hover:bg-bg-3")}>
+      <span className={cn("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border", cur === v ? "border-accent bg-accent" : "border-line-2")}>{cur === v && <span className="h-1.5 w-1.5 rounded-full bg-accent-fg" />}</span>
+      <span><span className="block text-[13px] font-medium">{title}</span><span className="text-xs text-fg-3">{desc}</span></span>
+    </button>
+  );
+}
+
 function Dialogs({ a, dlg, setDlg, changed }: { a: AD; dlg: string | null; setDlg: (d: null) => void; changed: (m: string, d?: string) => void }) {
   const [text, setText] = useState(""); const [disp, setDisp] = useState<"true_positive" | "false_positive" | "benign_explained">("true_positive");
   const [verdict, setVerdict] = useState<"true_positive" | "false_positive" | "benign_explained" | "needs_more_info">("true_positive");
@@ -169,12 +178,6 @@ function Dialogs({ a, dlg, setDlg, changed }: { a: AD; dlg: string | null; setDl
   useEffect(() => { setText(""); setDraft(undefined); if (dlg === "draft") api.draft(a.alert_id).then((r) => setDraft(r.draft)).catch((e) => setDraft(`Error: ${e.message}`)); }, [dlg, a.alert_id]);
   const run = async (f: () => Promise<unknown>, m: string, desc?: string) => { setBusy(true); try { await f(); setDlg(null); changed(m, desc); } catch (e) { err(e); } finally { setBusy(false); } };
   const close = () => setDlg(null);
-  const Opt = <T extends string>({ v, cur, set, title, desc }: { v: T; cur: T; set: (v: T) => void; title: string; desc: string }) => (
-    <button type="button" onClick={() => set(v)} className={cn("flex w-full items-start gap-3 rounded-xl border p-3 text-left transition", cur === v ? "border-accent/50 bg-accent-soft" : "border-line-2 hover:bg-bg-3")}>
-      <span className={cn("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border", cur === v ? "border-accent bg-accent" : "border-line-2")}>{cur === v && <span className="h-1.5 w-1.5 rounded-full bg-accent-fg" />}</span>
-      <span><span className="block text-[13px] font-medium">{title}</span><span className="text-xs text-fg-3">{desc}</span></span>
-    </button>
-  );
   return (<>
     <Dialog open={dlg === "escalate"} onOpenChange={close} title="Escalate to compliance lead" description="The reason is written to the immutable audit trail.">
       <form onSubmit={(e) => { e.preventDefault(); run(() => api.escalate(a.alert_id, text), "Alert escalated", `Account ${a.account}`); }} className="space-y-3">

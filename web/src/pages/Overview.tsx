@@ -18,7 +18,7 @@ export default function Overview() {
   const top = openItems[0]; const latest = items.reduce((m, a) => (a.date > m ? a.date : m), "");
   const topDetail = useData(() => (top ? api.alert(top.alert_id) : Promise.resolve(undefined)), [top?.alert_id]);
   const tl = useData(() => (top ? api.timeline(top.account, top.date, 30) : Promise.resolve(undefined)), [top?.alert_id]);
-  const s = stats.data?.alerts_by_status ?? {}; const budget = card.data?.test.selected.alert_budget[card.data.deployed_budget];
+  const s = stats.data?.alerts_by_status ?? {}; const budget = card.data?.test?.selected?.alert_budget?.[card.data.deployed_budget];
   const byPattern = items.reduce<Record<string, number>>((m, a) => ((m[a.pattern] = (m[a.pattern] ?? 0) + 1), m), {});
   const events = items.slice().sort((a, b) => b.updated_at.localeCompare(a.updated_at)).filter((a) => a.status !== "open").slice(0, 5);
   const statCards = [
@@ -98,7 +98,7 @@ export default function Overview() {
           <motion.div {...fade(7)}><Card className="h-full">
             <CardHeader title="Model health" icon={<ShieldCheck className="h-4 w-4" />} right={<Link to="/dashboard/model" className="flex items-center gap-1 text-xs text-fg-3 hover:text-fg">Details<ArrowUpRight className="h-3 w-3" /></Link>} />
             <div className="grid grid-cols-2 gap-4 px-5 pb-5">
-              {card.data ? ([["PR-AUC", card.data.test.selected.pr_auc.toFixed(3)], ["ROC-AUC", card.data.test.selected.roc_auc.toFixed(3)], ["Recall @ 1%", pct(card.data.test.selected.recall_at_1pct, 1)], ["Precision @ 100", pct(card.data.test.selected.precision_at_100)]] as const).map(([k, v]) => (
+              {card.data?.test?.selected ? ([["PR-AUC", card.data.test.selected.pr_auc.toFixed(3)], ["ROC-AUC", card.data.test.selected.roc_auc.toFixed(3)], ["Recall @ 1%", pct(card.data.test.selected.recall_at_1pct, 1)], ["Precision @ 100", pct(card.data.test.selected.precision_at_100)]] as const).map(([k, v]) => (
                 <div key={k}><div className="text-xs text-fg-3">{k}</div><div className="tnum mt-1 font-mono text-lg">{v}</div></div>
               )) : [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}
               <p className="col-span-2 text-[11px] leading-relaxed text-fg-3">Held-out test window from {card.data?.data.test_start ?? "…"} · {card.data?.data.test_positives ?? "…"} manipulative account-days</p>

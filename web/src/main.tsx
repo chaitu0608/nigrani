@@ -6,10 +6,10 @@ import { TooltipProvider } from "@radix-ui/react-tooltip";
 import "./index.css";
 import { AppShell } from "./components/AppShell";
 import { useTheme } from "./lib/hooks";
-import Overview from "./pages/Overview";
-import Queue from "./pages/Queue";
-import Cases from "./pages/Cases";
-import Model from "./pages/Model";
+const Overview = lazy(() => import("./pages/Overview"));
+const Queue = lazy(() => import("./pages/Queue"));
+const Cases = lazy(() => import("./pages/Cases"));
+const Model = lazy(() => import("./pages/Model"));
 const Landing = lazy(() => import("./pages/Landing"));
 
 function App() {

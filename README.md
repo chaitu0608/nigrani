@@ -50,7 +50,7 @@ Vite + React 19 + TypeScript + Tailwind v4, shadcn-style primitives (Radix + cva
 
 - `/` landing page: the SEBI problem, the pipeline, real model-card metrics fetched live, the three patterns, and a real MCP transcript from `docs/mcp_demo.md`.
 - `/dashboard` overview (queue stats, today's top risk), `/dashboard/queue` keyboard triage (`j/k`, `/`, `a` assign, `e` escalate, `c` close, `d` draft, `1-5` tabs), `/dashboard/cases` drag-and-drop board, `/dashboard/model`. `⌘K` everywhere, `g o/q/c/m` to navigate. The old page lives at `/dashboard/legacy`.
-- `make web-install web-build` writes the build to `nigrani/static/app` (committed), which FastAPI serves. `make web-dev` runs Vite with a `/v1` proxy. `make shots` regenerates `docs/screens/` with headless Playwright at 1440×900.
+- `make web-install web-build` writes the build to `nigrani/static/app` (committed), which FastAPI serves. `make web-dev` runs Vite with a `/v1` proxy. `make e2e` runs Playwright end-to-end tests that click every action (assign, escalate, close, reopen, draft, feedback, cases + notes + drag-and-drop, retrain/promote, ⌘K) against a throwaway DB and registry copy. `make shots` regenerates `docs/screens/` with headless Playwright at 1440×900.
 
 ## Data and why it's synthetic
 Real broker client trades are confidential. The public labelled AML sets (IBM AMLworld, Elliptic) cover bank transfers and Bitcoin, not exchange trades. `generate.py` builds a **seeded** tape instead: 2,000 accounts, 60 symbols, 120 trading days and 317,282 trades. Its typologies follow SEBI enforcement orders.

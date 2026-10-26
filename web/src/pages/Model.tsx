@@ -10,7 +10,7 @@ import { Badge, Button, Card, CardHeader, Segmented, Skeleton } from "@/componen
 export default function Model() {
   const card = useData(() => api.card()); const vers = useData(() => api.versions()); const drift = useData(() => api.drift()); const fb = useData(() => api.feedbackStats());
   const [budget, setBudget] = useState<string>("1.0%"); const [busy, setBusy] = useState(false);
-  const c = card.data; const t = c?.test.selected; const b = t?.alert_budget[budget]; const base = c?.test.v2_baseline;
+  const c = card.data; const t = c?.test?.selected; const b = t?.alert_budget?.[budget]; const base = c?.test?.v2_baseline;
   const shap = c ? Object.entries(c.global_shap_mean_abs).sort((a, b) => b[1] - a[1]).slice(0, 10) : []; const smax = shap[0]?.[1] ?? 1;
   const psi = drift.data ? Object.entries(drift.data.psi).slice(0, 10) : [];
   const admin = async (f: () => Promise<unknown>, ok: string) => { setBusy(true); try { const r = await f(); toast.success(ok, { description: typeof r === "object" ? JSON.stringify(r).slice(0, 120) : undefined }); vers.reload(true); } catch (e) { toast.error("Admin action failed", { description: `${(e as Error).message}. Switch to admin-dev-key via the key icon.` }); } finally { setBusy(false); } };

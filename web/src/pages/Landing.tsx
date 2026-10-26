@@ -33,7 +33,7 @@ const up = { initial: { opacity: 0, y: 16 }, whileInView: { opacity: 1, y: 0 }, 
 
 export default function Landing() {
   const { dark, toggle } = useTheme(); const card = useData(() => api.card());
-  const t = card.data?.test.selected; const b = t?.alert_budget[card.data!.deployed_budget];
+  const t = card.data?.test?.selected; const b = t?.alert_budget?.[card.data!.deployed_budget];
   const hero = useRef<HTMLDivElement>(null); const { scrollYProgress } = useScroll({ target: hero, offset: ["start start", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], [0, 80]); const op = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
   return (
@@ -77,7 +77,7 @@ export default function Landing() {
           {[
             [b ? pct(b.precision) : "—", "of alerts are real manipulation", `precision at the ${card.data?.deployed_budget ?? "1.0%"} alert budget`],
             [t ? pct(t.recall_at_1pct) : "—", "of manipulative account-days caught", "while reviewing only 1% of activity"],
-            [t ? t.pr_auc.toFixed(2) : "—", "PR-AUC on unseen weeks", `vs ${card.data?.test.v2_baseline?.pr_auc.toFixed(2) ?? "—"} for the v2 baseline`],
+            [t ? t.pr_auc.toFixed(2) : "—", "PR-AUC on unseen weeks", `vs ${card.data?.test?.v2_baseline?.pr_auc.toFixed(2) ?? "—"} for the v2 baseline`],
             [t?.episode_recall_at_deployed_threshold ? `${Object.values(t.episode_recall_at_deployed_threshold).reduce((s, e) => s + e.detected, 0)}/${Object.values(t.episode_recall_at_deployed_threshold).reduce((s, e) => s + e.episodes, 0)}` : "—", "manipulation episodes detected", "in the held-out test window"],
           ].map(([v, l, s], i) => (
             <motion.div key={i} {...up} transition={{ ...up.transition, delay: i * 0.06 }} className="px-2 py-10 md:px-6">
