@@ -6,3 +6,4 @@ artifacts/
 catboost_info/
 .coverage
 *.db
+!deploy/bake/data/
