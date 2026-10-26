@@ -19,6 +19,18 @@ def generate(n_accounts=2000, n_symbols=60, n_days=120, seed=7):
     acct_type = rng.choice(["retail", "hni", "active_trader", "nri"], n_accounts, p=[.75, .1, .12, .03])
     rows = []; tid = 0; PROP = 0
     family = (np.arange(n_accounts) + rng.integers(2, 50, n_accounts)) % n_accounts
+    # KYC attributes for entity resolution. Families share an address (legit); some manipulator groups
+    # share a phone or bank account (mule / proxy accounts); random co-tenancy adds realistic noise.
+    address = np.arange(n_accounts).copy(); phone = np.arange(n_accounts) + 10_000; bank = np.arange(n_accounts) + 20_000
+    for a in range(n_accounts):
+        if rng.random() < .5: address[family[a]] = address[a]
+    for _ in range(80):  # unrelated people at the same building / PG / office address
+        grp = rng.choice(n_accounts, rng.integers(2, 6), replace=False); address[grp] = address[grp[0]]
+    def link(grp, p):
+        grp = np.asarray(grp)
+        for x in grp[1:]:
+            if rng.random() < p:
+                arr = phone if rng.random() < .6 else bank; arr[x] = arr[grp[0]]
     def add(d, a, cp, s, side, qty, px, label, typ):
         nonlocal tid
         tid += 1
@@ -51,27 +63,27 @@ def generate(n_accounts=2000, n_symbols=60, n_days=120, seed=7):
                 add(d, a, -1, s, "B", rng.lognormal(5, .8), base_px[s] * (1 + rng.uniform(.01, .08)), 0, "legit_news_crowd")
         # --- injected manipulation ---
         if rng.random() < .35:  # wash trades: same beneficial owner on both sides (account pair)
-            a = rng.integers(n_accounts); b = (a + 1) % n_accounts; s = rng.choice(illiquid)
+            a = rng.integers(n_accounts); b = (a + 1) % n_accounts; s = rng.choice(illiquid); link([a, b], .4)
             for _ in range(rng.integers(4, 15)):
                 q = rng.lognormal(5, .5); p = base_px[s] * rng.normal(1.002, .003)
                 add(d, a, b, s, "B", q, p, 1, "wash"); add(d, b, a, s, "S", q, p, 1, "wash")
         if rng.random() < .25:  # circular ring of 3-5 accounts
-            ring = rng.choice(n_accounts, rng.integers(3, 6), replace=False); s = rng.choice(illiquid)
+            ring = rng.choice(n_accounts, rng.integers(3, 6), replace=False); link(ring, .3); s = rng.choice(illiquid)
             q = rng.lognormal(5, .4)
             for r in range(rng.integers(2, 5)):
                 for i, a in enumerate(ring):
                     b = ring[(i + 1) % len(ring)]; p = base_px[s] * (1 + .01 * r)
                     add(d, a, b, s, "S", q, p, 1, "circular"); add(d, b, a, s, "B", q, p, 1, "circular")
         if di % 11 == 3:  # subtle pump: small group, small size, mixed with normal trades, liquid-ish stock sometimes
-            grp = rng.choice(n_accounts, rng.integers(2, 5), replace=False); s = rng.choice(illiquid if rng.random() < .6 else np.arange(n_symbols))
+            grp = rng.choice(n_accounts, rng.integers(2, 5), replace=False); link(grp, .35); s = rng.choice(illiquid if rng.random() < .6 else np.arange(n_symbols))
             for j in range(4):
                 if di + j >= n_days: break
                 for a in grp:
                     for _ in range(rng.integers(1, 3)):
                         add(days[di + j], a, -1, s, "B" if j < 2 else "S", rng.lognormal(4.5, .7), base_px[s] * (1 + .02 * min(j, 2)), 1, "pump_dump_subtle")
-                    add(days[di + j], a, -1, rng.integers(n_symbols), rng.choice(["B", "S"]), rng.lognormal(3, 1), base_px[0], 0, "normal")
+                    s2 = rng.integers(n_symbols); add(days[di + j], a, -1, s2, rng.choice(["B", "S"]), rng.lognormal(3, 1), base_px[s2] * rng.normal(1, .01), 0, "normal")
         if di % 15 == 5:  # pump & dump: group accumulates then dumps over 5 days
-            grp = rng.choice(n_accounts, rng.integers(4, 9), replace=False); s = rng.choice(illiquid)
+            grp = rng.choice(n_accounts, rng.integers(4, 9), replace=False); link(grp, .35); s = rng.choice(illiquid)
             for j in range(5):
                 if di + j >= n_days: break
                 dj = days[di + j]
@@ -86,7 +98,7 @@ def generate(n_accounts=2000, n_symbols=60, n_days=120, seed=7):
     df = pd.DataFrame(rows, columns=["trade_id", "date", "account", "counterparty", "symbol", "side", "qty", "price", "label", "typology"])
     df["symbol"] = "SYM" + df.symbol.astype(str).str.zfill(3)
     df["illiquid"] = df.symbol.isin(["SYM" + str(i).zfill(3) for i in illiquid]).astype(int)
-    accts = pd.DataFrame({"account": range(n_accounts), "acct_type": acct_type})
+    accts = pd.DataFrame({"account": range(n_accounts), "acct_type": acct_type, "address_id": address, "phone_id": phone, "bank_id": bank})
     return df, accts
 
 if __name__ == "__main__":
